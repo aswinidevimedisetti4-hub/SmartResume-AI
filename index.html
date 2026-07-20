@@ -3,18 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ResumeAI Analyst - AI-Powered Professional ATS Resume Reviewer</title>
-  <meta name="description" content="Get instant, expert ATS feedback on your resume. Analyze score, strengths, weaknesses, skills match, and get personalized summaries to stand out to recruiters.">
+  <title>Resume Review AI - AI-Powered Professional Resume & Cover Letter Suite</title>
+  <meta name="description" content="Parse PDF/DOCX resumes, semantic match against job descriptions, audit ATS formatting flags, and generate a tailored resume.">
   <!-- Google Fonts: Outfit (headings) and Inter (body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- PDF.js library for client-side PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  
+  <!-- Mammoth.js library for client-side DOCX text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  
+  <!-- html2pdf.js library for client-side PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-container">
+  <div class="app-container" id="app-root">
     <!-- Header -->
-    <header class="app-header">
+    <header class="app-header no-print">
       <div class="logo-area">
         <div class="logo-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,76 +39,60 @@
             </defs>
           </svg>
         </div>
-        <h1>ResumeAI <span class="accent-text">Analyst v2.0</span></h1>
+        <h1>ResumeAI <span class="accent-text">Agent v3.0</span></h1>
       </div>
-      <p class="tagline">Evaluate your ATS score, discover key formatting issues, map tech and soft skills, and export recruiter-ready feedback reports.</p>
+      <p class="tagline">Extract resume text locally, perform semantic comparisons with JDs, scan ATS red flags, and dynamically rewrite tailored resumes.</p>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="dashboard-grid">
-      <!-- Left Column: Control Panel -->
-      <section class="control-panel panel-card">
+    <!-- WORKSPACE 1: Review & Scoring Dashboard -->
+    <main class="dashboard-grid active-workspace" id="workspace-dashboard">
+      <!-- Left Column: Input Panel -->
+      <section class="control-panel panel-card no-print">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          Configuration & Paste
+          Analyze Resume
         </h2>
 
+        <!-- File Upload Area -->
         <div class="form-group">
-          <label for="job-role">Target Job Role</label>
-          <div class="select-wrapper">
-            <select id="job-role" class="form-input">
-              <option value="frontend">Frontend Developer</option>
-              <option value="backend">Backend Developer</option>
-              <option value="fullstack">Full-Stack Developer</option>
-              <option value="datascience">Data Scientist / Analyst</option>
-              <option value="productmanager">Product Manager</option>
-              <option value="designer">UI/UX Designer</option>
-              <option value="devops">DevOps & Cloud Engineer</option>
-              <option value="marketing">Marketing Specialist</option>
-            </select>
+          <label>1. Upload Resume (PDF, DOCX, or TXT)</label>
+          <div class="upload-drop-zone" id="upload-drop-zone">
+            <input type="file" id="resume-file" accept=".pdf,.docx,.txt" style="display: none;">
+            <div class="upload-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <p class="upload-text" id="upload-status-text">Drag & drop your file here or click to browse</p>
+            <span class="file-name-label" id="file-name-label">No file selected</span>
           </div>
+          <span class="error-msg" id="upload-error">Failed to parse document. Please check layout.</span>
         </div>
 
-        <div class="form-group">
-          <label for="exp-level">Experience Level</label>
-          <div class="select-wrapper">
-            <select id="exp-level" class="form-input">
-              <option value="entry">Entry Level (0-2 years)</option>
-              <option value="mid" selected>Mid Level (2-5 years)</option>
-              <option value="senior">Senior / Lead (5+ years)</option>
-            </select>
-          </div>
-        </div>
-
+        <!-- Optional Job Description Paste -->
         <div class="form-group flex-grow">
           <div class="label-header">
-            <label for="resume-text">Paste Resume Text</label>
+            <label for="jd-text">2. Target Job Description (Optional)</label>
             <div class="char-counters">
-              <span class="word-counter" id="word-count">0 words</span>
-              <span class="char-separator">|</span>
-              <span class="word-counter" id="char-count">0 chars</span>
+              <span class="word-counter" id="jd-word-count">0 words</span>
             </div>
           </div>
           <textarea 
-            id="resume-text" 
+            id="jd-text" 
             class="form-input text-area" 
-            placeholder="Paste the plain text of your resume here... Include sections like Professional Summary, Experience, Education, and Skills for the most accurate analysis."
-            required
+            placeholder="Paste the job description you are targeting here. We will perform a semantic match against this description, identify gaps, and reframe your resume."
           ></textarea>
-          <span class="error-msg" id="validation-error">Please enter resume text before reviewing.</span>
         </div>
 
         <div class="button-group">
-          <button id="clear-btn" class="secondary-btn">Clear</button>
+          <button id="clear-btn" class="secondary-btn">Reset All</button>
           <button id="review-btn" class="primary-btn">
-            <span>Review Resume</span>
+            <span>Analyze Resume</span>
             <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
           </button>
         </div>
       </section>
 
       <!-- Right Column: Results Panel -->
-      <section class="results-panel panel-card" id="results-card-container">
+      <section class="results-panel panel-card">
         <!-- State 1: Empty / Prompt -->
         <div id="results-empty" class="results-state state-empty active">
           <div class="state-illustration">
@@ -116,8 +110,8 @@
               </svg>
             </div>
           </div>
-          <h3>Ready for Scan</h3>
-          <p>Paste your resume on the left and select your target role. Our AI parser will scan for structure, completeness, action verbs, metrics, and skills match.</p>
+          <h3>Awaiting Input</h3>
+          <p>Please upload a resume file (PDF/DOCX/TXT) on the left. Paste a target Job Description to activate semantic comparison and tailored rewriting.</p>
         </div>
 
         <!-- State 2: Scanning / Loading -->
@@ -133,185 +127,252 @@
               </div>
             </div>
             <div class="scanner-text-container">
-              <h3 class="shimmer-text">Analyzing Resume...</h3>
-              <p class="scanning-step" id="scanning-step-text">Reading sections...</p>
+              <h3 class="shimmer-text">Processing Document...</h3>
+              <p class="scanning-step" id="scanning-step-text">Extracting plain text layout...</p>
             </div>
           </div>
         </div>
 
         <!-- State 3: Analysis Results -->
         <div id="results-content" class="results-state state-results">
-          <!-- Main Action Utilities Bar -->
-          <div class="utilities-bar">
-            <button id="copy-analysis-btn" class="utility-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copy Analysis</span>
-            </button>
-            <button id="pdf-export-btn" class="utility-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>Export PDF</span>
-            </button>
-            <button id="reset-analysis-btn" class="utility-btn reset">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
-              <span>Reset</span>
-            </button>
-          </div>
-
           <!-- Score Dashboard Header -->
           <div class="score-dashboard">
-            <div class="score-radial-container">
-              <svg class="score-radial-svg" viewBox="0 0 100 100">
-                <circle class="radial-bg" cx="50" cy="50" r="40"></circle>
-                <circle class="radial-progress" cx="50" cy="50" r="40" id="radial-progress-bar"></circle>
-              </svg>
-              <div class="score-value-overlay">
-                <span class="score-number" id="score-val">0</span>
-                <span class="score-total">/100</span>
+            <!-- Radial ATS Gauge -->
+            <div class="gauge-box">
+              <div class="score-radial-container">
+                <svg class="score-radial-svg" viewBox="0 0 100 100">
+                  <circle class="radial-bg" cx="50" cy="50" r="40"></circle>
+                  <circle class="radial-progress" cx="50" cy="50" r="40" id="radial-progress-bar"></circle>
+                </svg>
+                <div class="score-value-overlay">
+                  <span class="score-number" id="score-val">0</span>
+                  <span class="score-total">/100</span>
+                </div>
               </div>
+              <span class="gauge-label">ATS Score</span>
             </div>
+
+            <!-- Radial JD Match Gauge -->
+            <div class="gauge-box" id="jd-match-box" style="display: none;">
+              <div class="score-radial-container">
+                <svg class="score-radial-svg" viewBox="0 0 100 100">
+                  <circle class="radial-bg" cx="50" cy="50" r="40"></circle>
+                  <circle class="radial-progress" cx="50" cy="50" r="40" id="radial-match-bar"></circle>
+                </svg>
+                <div class="score-value-overlay">
+                  <span class="score-number" id="match-val">0</span>
+                  <span class="score-total">%</span>
+                </div>
+              </div>
+              <span class="gauge-label">JD Match</span>
+            </div>
+
             <div class="score-meta">
               <div class="badge-row">
-                <span class="score-badge" id="score-badge">Good</span>
+                <span class="score-badge" id="score-badge">Scanning</span>
               </div>
-              <h3 class="analysis-status" id="score-heading">ATS System Analysis</h3>
-              <p class="analysis-summary" id="score-summary">Great start! With some optimization, you'll significantly increase your interview chances.</p>
+              <h3 class="analysis-status" id="score-heading">Auditing Complete</h3>
+              <p class="analysis-summary" id="score-summary">We parsed your resume sections. Add a Job Description to verify matching keywords and strengths.</p>
             </div>
           </div>
 
-          <!-- Score Breakdown Grid -->
-          <div class="breakdown-grid">
-            <div class="breakdown-item">
-              <div class="breakdown-label-row">
-                <span>Structure & Layout Completeness</span>
-                <span class="breakdown-percent" id="breakdown-structure-val">0%</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="breakdown-structure-fill" style="width: 0%"></div>
-              </div>
+          <!-- Rewrite Suite Call-To-Action (Glowing Banner) -->
+          <div class="rewrite-cta-banner" id="rewrite-cta-banner" style="display: none;">
+            <div class="cta-content">
+              <h4>Generate Tailored Resume</h4>
+              <p>Re-frame your experience accomplishments automatically to align with target JD keywords.</p>
             </div>
-            <div class="breakdown-item">
-              <div class="breakdown-label-row">
-                <span>Impact & Metrics Usage</span>
-                <span class="breakdown-percent" id="breakdown-impact-val">0%</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="breakdown-impact-fill" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="breakdown-item">
-              <div class="breakdown-label-row">
-                <span>Active Action Verb Ratio</span>
-                <span class="breakdown-percent" id="breakdown-verbs-val">0%</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="breakdown-verbs-fill" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="breakdown-item">
-              <div class="breakdown-label-row">
-                <span>Keyword & Target Role Alignment</span>
-                <span class="breakdown-percent" id="breakdown-match-val">0%</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="breakdown-match-fill" style="width: 0%"></div>
-              </div>
-            </div>
+            <button id="generate-resume-btn" class="cta-glow-btn">
+              <span>Open Rewrite Suite</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
           </div>
 
-          <!-- Section: Job Role Recommendations -->
-          <div class="detail-card card-recommendations">
-            <div class="detail-card-header">
-              <div class="header-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-              </div>
-              <h4>Recommended Job Roles & Confidence Match</h4>
-            </div>
-            <div id="recommended-roles-container" class="recommended-roles-list">
-              <!-- Filled dynamically -->
-            </div>
-          </div>
-
-          <!-- Section: Recommended Professional Summary -->
-          <div class="detail-card card-summary-generated">
-            <div class="detail-card-header">
-              <div class="header-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-              </div>
-              <h4>ATS-Optimized Profile Summary Recommendation</h4>
-            </div>
-            <p class="generated-summary-text" id="generated-summary-content">No summary compiled.</p>
-          </div>
-
-          <!-- Two Column Detail Sections -->
-          <div class="analysis-details">
-            <!-- Strengths Card -->
-            <div class="detail-card card-strengths">
+          <!-- Semantic JD Matching Results: Advantages vs Disadvantages -->
+          <div class="jd-comparison-details" id="jd-comparison-details" style="display: none;">
+            <div class="detail-card card-advantages">
               <div class="detail-card-header">
                 <div class="header-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                 </div>
-                <h4>Resume Strengths</h4>
+                <h4>Advantages (Matching Strengths)</h4>
               </div>
-              <ul id="list-strengths" class="detail-list check-bullet">
+              <ul id="list-advantages" class="detail-list check-bullet">
                 <!-- Filled dynamically -->
               </ul>
             </div>
 
-            <!-- Weaknesses Card -->
-            <div class="detail-card card-weaknesses">
+            <div class="detail-card card-disadvantages">
               <div class="detail-card-header">
                 <div class="header-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 </div>
-                <h4>Resume Weaknesses & Improvements</h4>
+                <h4>Disadvantages (Gaps & Weaknesses)</h4>
               </div>
-              <ul id="list-weaknesses" class="detail-list warning-bullet">
+              <ul id="list-disadvantages" class="detail-list cross-bullet">
                 <!-- Filled dynamically -->
               </ul>
             </div>
+          </div>
 
-            <!-- Skills Detected Card -->
-            <div class="detail-card card-skills-detected">
-              <div class="detail-card-header">
-                <div class="header-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-                </div>
-                <h4>Skills Detected in Resume</h4>
+          <!-- ATS Red Flags (Always Visible) -->
+          <div class="detail-card card-redflags">
+            <div class="detail-card-header">
+              <div class="header-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
               </div>
-              <div class="skills-section-wrapper">
-                <h5 class="badge-group-title">Technical Skills</h5>
-                <div id="detected-tech-skills" class="skills-tag-container">
-                  <!-- Filled dynamically -->
-                </div>
-              </div>
-              <div class="skills-section-wrapper" style="margin-top: 1.25rem;">
-                <h5 class="badge-group-title">Soft Skills</h5>
-                <div id="detected-soft-skills" class="skills-tag-container text-teal">
-                  <!-- Filled dynamically -->
-                </div>
-              </div>
+              <h4>ATS Red Flags & Formatting Warnings</h4>
             </div>
+            <ul id="list-redflags" class="detail-list warning-bullet">
+              <!-- Filled dynamically -->
+            </ul>
+          </div>
 
-            <!-- Missing Skills & Importance Card -->
-            <div class="detail-card card-skills">
-              <div class="detail-card-header">
-                <div class="header-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                </div>
-                <h4>Missing Skills Recommendations</h4>
+          <!-- Actionable Suggestions -->
+          <div class="detail-card card-suggestions">
+            <div class="detail-card-header">
+              <div class="header-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
               </div>
-              <ul id="list-skills-missing-explained" class="detail-list missing-bullet">
-                <!-- Filled dynamically -->
-              </ul>
+              <h4>Actionable Keywords & Suggestions</h4>
             </div>
+            <ul id="list-suggestions" class="detail-list bullet-list">
+              <!-- Filled dynamically -->
+            </ul>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="app-footer no-print">
-      <p>&copy; 2026 ResumeAI Analyst. Designed for modern builders and professionals. Built using HTML5, CSS3, & ES6 Javascript.</p>
-    </footer>
+    <!-- WORKSPACE 2: Tailored Resume Rewriting Suite (Hidden by default) -->
+    <main class="rewrite-workspace" id="workspace-rewrite" style="display: none;">
+      <!-- Title Actions bar -->
+      <div class="workspace-title-bar no-print">
+        <button id="back-btn" class="utility-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <span>Back to Dashboard</span>
+        </button>
+        <h3>AI Rewriting & Customization Suite</h3>
+        <div class="templates-action-wrapper">
+          <label for="template-select">Template:</label>
+          <select id="template-select" class="form-input compact-select">
+            <option value="modern">Modern Tech (Indigo Accent)</option>
+            <option value="classic">Classic Serif (Times Roman)</option>
+            <option value="minimal">Minimalist (Clean Sans)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Live Split Workspace Grid -->
+      <div class="split-workspace-grid">
+        <!-- Left Side: Interactive Section Editor -->
+        <section class="section-editor panel-card no-print">
+          <h4 class="editor-subtitle">Review & Edit Generated Details</h4>
+          
+          <div class="editor-scrollable">
+            <!-- Contact details -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Contact Information</h5>
+              <div class="accordion-content">
+                <div class="input-grid">
+                  <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="edit-name" class="form-input editor-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="edit-email" class="form-input editor-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" id="edit-phone" class="form-input editor-field">
+                  </div>
+                  <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="edit-location" class="form-input editor-field">
+                  </div>
+                  <div class="form-group colspan-2">
+                    <label>LinkedIn / GitHub Link</label>
+                    <input type="text" id="edit-links" class="form-input editor-field">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Profile Summary -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Professional Summary</h5>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <textarea id="edit-summary" class="form-input editor-field textarea-field"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skills -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Core Skills (Comma separated)</h5>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <textarea id="edit-skills" class="form-input editor-field textarea-field"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Professional Experience -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Work Experience</h5>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <textarea id="edit-experience" class="form-input editor-field textarea-field large-field"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Education -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Education</h5>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <textarea id="edit-education" class="form-input editor-field textarea-field"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Projects -->
+            <div class="accordion-item">
+              <h5 class="accordion-header">Projects</h5>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <textarea id="edit-projects" class="form-input editor-field textarea-field large-field"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Side: Live Resume Preview -->
+        <section class="resume-preview-panel panel-card">
+          <div class="preview-actions no-print">
+            <button id="copy-text-btn" class="utility-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy Text</span>
+            </button>
+            <button id="download-pdf-btn" class="utility-btn accent-utility">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Download PDF</span>
+            </button>
+          </div>
+
+          <!-- Document Render Area -->
+          <div class="preview-scroll-container">
+            <div class="resume-sheet template-modern" id="resume-preview-sheet">
+              <!-- Rendered dynamically via js templates -->
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 
   <script src="app.js"></script>
